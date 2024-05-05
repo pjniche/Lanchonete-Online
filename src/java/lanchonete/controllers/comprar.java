@@ -20,9 +20,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import java.sql.Date;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -33,6 +30,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -49,6 +48,9 @@ public class Comprar extends HttpServlet {
      * @throws ServletException if a servlet-specific error occurs
      * @throws IOException if an I/O error occurs
      */
+    
+    Logger logger = LoggerFactory.getLogger(Comprar.class);
+    
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -68,8 +70,9 @@ public class Comprar extends HttpServlet {
         }catch(java.lang.NullPointerException e){}
         //////////////
         
-        if ((br != null) && resultado) {
+        if (resultado) {
             json = br.readLine();
+            br.close();
             byte[] bytes = json.getBytes(ISO_8859_1); 
             String jsonStr = new String(bytes, UTF_8);            
             JSONObject dados = new JSONObject(jsonStr);
@@ -80,11 +83,11 @@ public class Comprar extends HttpServlet {
             
             Iterator<String> keys = dados.keys();
             
-            Double valor_total = 0.00;
+            Double valorTotal = 0.00;
             
-            List<Lanche> lanches = new ArrayList<Lanche>();
-            List<Bebida> bebidas = new ArrayList<Bebida>();
-            
+            List<Lanche> lanches = new ArrayList<>();
+            List<Bebida> bebidas = new ArrayList<>();  
+                         
             
             while(keys.hasNext()) {
                 
@@ -95,7 +98,7 @@ public class Comprar extends HttpServlet {
                         Lanche lanche = lancheDao.pesquisaPorNome(nome);
                         int quantidade = dados.getJSONArray(nome).getInt(2);
                         lanche.setQuantidade(quantidade);
-                        valor_total += lanche.getValor_venda();
+                        valorTotal += lanche.getValor_venda();
                         lanches.add(lanche);
                     }
                     if(dados.getJSONArray(nome).get(1).equals("bebida")){
@@ -103,7 +106,7 @@ public class Comprar extends HttpServlet {
                         Bebida bebida = bebidaDao.pesquisaPorNome(nome);
                         int quantidade = dados.getJSONArray(nome).getInt(2);
                         bebida.setQuantidade(quantidade);
-                        valor_total += bebida.getValor_venda();
+                        valorTotal += bebida.getValor_venda();
                         bebidas.add(bebida);
                     }
                 }
@@ -113,12 +116,13 @@ public class Comprar extends HttpServlet {
             Pedido pedido = new Pedido();
             pedido.setData_pedido(Instant.now().toString());
             pedido.setCliente(cliente);
-            pedido.setValor_total(valor_total);
+            pedido.setValor_total(valorTotal);
             pedidoDao.salvar(pedido);
             pedido = pedidoDao.pesquisaPorData(pedido);
             pedido.setCliente(cliente);
             
-            System.out.println(lanches.toString());
+            
+            logger.info(lanches.toString());
             for(int i = 0; i<lanches.size(); i++){
                 pedidoDao.vincularLanche(pedido, lanches.get(i));
             }
