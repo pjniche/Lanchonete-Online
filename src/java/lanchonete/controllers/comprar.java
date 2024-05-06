@@ -48,8 +48,20 @@ public class Comprar extends HttpServlet {
      * @throws ServletException if a servlet-specific error occurs
      * @throws IOException if an I/O error occurs
      */
+
+    private List<Lanche> lanches;
+    private List<Bebida> bebidas;
+    private Double valorTotal;
+
+    // Construtor padrão
+    public Comprar() {
+        // Inicialize qualquer estado necessário aqui
+        this.lanches = new ArrayList<>();
+        this.bebidas = new ArrayList<>();
+        this.valorTotal = 0.0;
+    }
     
-    private boolean validarCookie(HttpServletRequest request) {
+    boolean validarCookie(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         ValidadorCookie validar = new ValidadorCookie();
         return validar.validar(cookies);
@@ -63,7 +75,38 @@ public class Comprar extends HttpServlet {
         byte[] bytes = json.getBytes(ISO_8859_1); 
         String jsonStr = new String(bytes, UTF_8);            
         JSONObject dados = new JSONObject(jsonStr);
-        // ... restante do processamento do JSON ...
+
+        Double valorTotalAux = 0.00;
+        List<Lanche> lanchesAux = new ArrayList<>();
+        List<Bebida> bebidasAux = new ArrayList<>();
+
+        Iterator<String> keys = dados.keys();
+        while (keys.hasNext()) {
+            String nome = keys.next();
+            if (!nome.equals("id")) {
+                if (dados.getJSONArray(nome).get(1).equals("lanche")) {
+                    DaoLanche lancheDao = new DaoLanche();
+                    Lanche lanche = lancheDao.pesquisaPorNome(nome);
+                    int quantidade = dados.getJSONArray(nome).getInt(2);
+                    lanche.setQuantidade(quantidade);
+                    valorTotalAux += lanche.getValor_venda();
+                    lanchesAux.add(lanche);
+                }
+                if (dados.getJSONArray(nome).get(1).equals("bebida")) {
+                    DaoBebida bebidaDao = new DaoBebida();
+                    Bebida bebida = bebidaDao.pesquisaPorNome(nome);
+                    int quantidade = dados.getJSONArray(nome).getInt(2);
+                    bebida.setQuantidade(quantidade);
+                    valorTotalAux += bebida.getValor_venda();
+                    bebidasAux.add(bebida);
+                }
+            }
+        }
+
+        // Armazenar os resultados em variáveis locais
+        this.lanches = lanchesAux;
+        this.bebidas = bebidasAux;
+        this.valorTotal = valorTotalAux;
     }
 
     private Cliente buscarCliente(int id) {
@@ -73,12 +116,31 @@ public class Comprar extends HttpServlet {
 
     private void processarLanchesEBebidas(JSONObject dados, List<Lanche> lanches, List<Bebida> bebidas) {
         Iterator<String> keys = dados.keys();
+        Double valorTotalAux = 0.00;
+
         while (keys.hasNext()) {
             String nome = keys.next();
             if (!nome.equals("id")) {
-                // ... processamento de lanches e bebidas ...
+                if (dados.getJSONArray(nome).get(1).equals("lanche")) {
+                    DaoLanche lancheDao = new DaoLanche();
+                    Lanche lanche = lancheDao.pesquisaPorNome(nome);
+                    int quantidade = dados.getJSONArray(nome).getInt(2);
+                    lanche.setQuantidade(quantidade);
+                    valorTotalAux += lanche.getValor_venda();
+                    lanches.add(lanche);
+                }
+                if (dados.getJSONArray(nome).get(1).equals("bebida")) {
+                    DaoBebida bebidaDao = new DaoBebida();
+                    Bebida bebida = bebidaDao.pesquisaPorNome(nome);
+                    int quantidade = dados.getJSONArray(nome).getInt(2);
+                    bebida.setQuantidade(quantidade);
+                    valorTotalAux += bebida.getValor_venda();
+                    bebidas.add(bebida);
+                }
             }
         }
+
+        this.valorTotal = valorTotalAux;
     }
 
     private void salvarPedido(Pedido pedido, DaoPedido pedidoDao) {
@@ -105,22 +167,34 @@ public class Comprar extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException {
 
-    response.setContentType("application/json");
-    response.setCharacterEncoding("UTF-8");
-    BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
-    String json = lerJsonDaRequisicao(br);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
+        String json = lerJsonDaRequisicao(br);
 
-    boolean resultado = validarCookie(request);
+        boolean resultado = validarCookie(request);
+        
         if (resultado) {
+            
             processarJson(json, response);
-            // ... restante do processamento ...
-            Cliente cliente = buscarCliente(dados.getInt("id"));
-            List<Lanche> lanches = new ArrayList<>();
-            List<Bebida> bebidas = new ArrayList<>();
-            processarLanchesEBebidas(dados, lanches, bebidas);
+            
+            Cliente cliente = buscarCliente(this.lanches.get(0).getJSONObject("id").getInt("id"));
             Pedido pedido = new Pedido();
-            salvarPedido(pedido, new DaoPedido());
-            vincularLanchesEBebidasAoPedido(pedido, lanches, bebidas, new DaoPedido());
+            pedido.setData_pedido(Instant.now().toString());
+            pedido.setCliente(cliente);
+            pedido.setValor_total(this.valorTotal);
+            DaoPedido pedidoDao = new DaoPedido();
+            
+            salvarPedido(pedido, pedidoDao);
+            
+            pedido = pedidoDao.pesquisaPorData(pedido);
+            pedido.setCliente(cliente);
+            
+            vincularLanchesEBebidasAoPedido(pedido, this.lanches, this.bebidas, pedidoDao);
+            
+            Logger logger = LoggerFactory.getLogger(Comprar.class);
+            logger.info(this.lanches.toString());
+            
             retornarResposta(response, "Pedido Salvo com Sucesso!");
         } else {
             retornarResposta(response, "erro");
