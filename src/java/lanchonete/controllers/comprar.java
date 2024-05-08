@@ -48,159 +48,93 @@ public class Comprar extends HttpServlet {
      * @throws ServletException if a servlet-specific error occurs
      * @throws IOException if an I/O error occurs
      */
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
-    private List<Lanche> lanches;
-    private List<Bebida> bebidas;
-    private Double valorTotal;
-
-    // Construtor padrão
-    public Comprar() {
-        // Inicialize qualquer estado necessário aqui
-        this.lanches = new ArrayList<>();
-        this.bebidas = new ArrayList<>();
-        this.valorTotal = 0.0;
-    }
-    
-    boolean validarCookie(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        ValidadorCookie validar = new ValidadorCookie();
-        return validar.validar(cookies);
-    }
-
-    private String lerJsonDaRequisicao(BufferedReader br) throws IOException {
-        return br.readLine();
-    }
-
-    private void processarJson(String json, HttpServletResponse response) throws ServletException, IOException {
-        byte[] bytes = json.getBytes(ISO_8859_1); 
-        String jsonStr = new String(bytes, UTF_8);            
-        JSONObject dados = new JSONObject(jsonStr);
-
-        Double valorTotalAux = 0.00;
-        List<Lanche> lanchesAux = new ArrayList<>();
-        List<Bebida> bebidasAux = new ArrayList<>();
-
-        Iterator<String> keys = dados.keys();
-        while (keys.hasNext()) {
-            String nome = keys.next();
-            if (!nome.equals("id")) {
-                if (dados.getJSONArray(nome).get(1).equals("lanche")) {
-                    DaoLanche lancheDao = new DaoLanche();
-                    Lanche lanche = lancheDao.pesquisaPorNome(nome);
-                    int quantidade = dados.getJSONArray(nome).getInt(2);
-                    lanche.setQuantidade(quantidade);
-                    valorTotalAux += lanche.getValor_venda();
-                    lanchesAux.add(lanche);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        try(BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()))) {
+            ////////Validar Cookie
+            boolean resultado = false;
+            try{
+                Cookie[] cookies = request.getCookies();
+                ValidadorCookie validar = new ValidadorCookie();
+                
+                resultado = validar.validar(cookies);
+            }catch(java.lang.NullPointerException e){
+                //////////////
+            }
+            if (resultado) {
+                String json = br.readLine();
+                byte[] bytes = json.getBytes(ISO_8859_1); 
+                String jsonStr = new String(bytes, UTF_8);            
+                JSONObject dados = new JSONObject(jsonStr);
+                
+                validarPedido(dados);
+                
+                try (PrintWriter out = response.getWriter()) {
+                    out.println("Pedido Salvo com Sucesso!");
                 }
-                if (dados.getJSONArray(nome).get(1).equals("bebida")) {
-                    DaoBebida bebidaDao = new DaoBebida();
-                    Bebida bebida = bebidaDao.pesquisaPorNome(nome);
-                    int quantidade = dados.getJSONArray(nome).getInt(2);
-                    bebida.setQuantidade(quantidade);
-                    valorTotalAux += bebida.getValor_venda();
-                    bebidasAux.add(bebida);
+            } else {
+                try (PrintWriter out = response.getWriter()) {
+                    out.println("erro");
                 }
             }
         }
-
-        // Armazenar os resultados em variáveis locais
-        this.lanches = lanchesAux;
-        this.bebidas = bebidasAux;
-        this.valorTotal = valorTotalAux;
     }
-
-    private Cliente buscarCliente(int id) {
+    
+    public void validarPedido(JSONObject dados){
+        
         DaoCliente clienteDao = new DaoCliente(); 
-        return clienteDao.pesquisaPorID(String.valueOf(id));
-    }
-
-    private void processarLanchesEBebidas(JSONObject dados, List<Lanche> lanches, List<Bebida> bebidas) {
+        Cliente cliente = clienteDao.pesquisaPorID(String.valueOf(dados.getInt("id")));
+            
         Iterator<String> keys = dados.keys();
-        Double valorTotalAux = 0.00;
-
-        while (keys.hasNext()) {
+            
+        Double valorTotal = 0.00;
+            
+        List<Lanche> lanches = new ArrayList<>();
+        List<Bebida> bebidas = new ArrayList<>();
+        
+        while(keys.hasNext()) {
+                
             String nome = keys.next();
-            if (!nome.equals("id")) {
-                if (dados.getJSONArray(nome).get(1).equals("lanche")) {
+            if(!nome.equals("id")){
+                if(dados.getJSONArray(nome).get(1).equals("lanche")){
                     DaoLanche lancheDao = new DaoLanche();
                     Lanche lanche = lancheDao.pesquisaPorNome(nome);
                     int quantidade = dados.getJSONArray(nome).getInt(2);
                     lanche.setQuantidade(quantidade);
-                    valorTotalAux += lanche.getValor_venda();
+                    valorTotal += lanche.getValor_venda();
                     lanches.add(lanche);
                 }
-                if (dados.getJSONArray(nome).get(1).equals("bebida")) {
+                if(dados.getJSONArray(nome).get(1).equals("bebida")){
                     DaoBebida bebidaDao = new DaoBebida();
                     Bebida bebida = bebidaDao.pesquisaPorNome(nome);
                     int quantidade = dados.getJSONArray(nome).getInt(2);
                     bebida.setQuantidade(quantidade);
-                    valorTotalAux += bebida.getValor_venda();
+                    valorTotal += bebida.getValor_venda();
                     bebidas.add(bebida);
                 }
             }
         }
-
-        this.valorTotal = valorTotalAux;
-    }
-
-    private void salvarPedido(Pedido pedido, DaoPedido pedidoDao) {
+        
+        DaoPedido pedidoDao = new DaoPedido();
+        Pedido pedido = new Pedido();
+        pedido.setData_pedido(Instant.now().toString());
+        pedido.setCliente(cliente);
+        pedido.setValor_total(valorTotal);
         pedidoDao.salvar(pedido);
         pedido = pedidoDao.pesquisaPorData(pedido);
         pedido.setCliente(cliente);
-    }
-
-    private void vincularLanchesEBebidasAoPedido(Pedido pedido, List<Lanche> lanches, List<Bebida> bebidas, DaoPedido pedidoDao) {
-        for (int i = 0; i < lanches.size(); i++) {
+            
+        Logger logger = LoggerFactory.getLogger(Comprar.class);
+        logger.info(lanches.toString());
+        for(int i = 0; i<lanches.size(); i++){
             pedidoDao.vincularLanche(pedido, lanches.get(i));
         }
-        for (int i = 0; i < bebidas.size(); i++) {
+        for(int i = 0; i<bebidas.size(); i++){
             pedidoDao.vincularBebida(pedido, bebidas.get(i));
         }
-    }
-
-    private void retornarResposta(HttpServletResponse response, String mensagem) throws IOException {
-        try (PrintWriter out = response.getWriter()) {
-            out.println(mensagem);
-        }
-    }
-
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()));
-        String json = lerJsonDaRequisicao(br);
-
-        boolean resultado = validarCookie(request);
-        
-        if (resultado) {
-            
-            processarJson(json, response);
-            
-            Cliente cliente = buscarCliente(this.lanches.get(0).getJSONObject("id").getInt("id"));
-            Pedido pedido = new Pedido();
-            pedido.setData_pedido(Instant.now().toString());
-            pedido.setCliente(cliente);
-            pedido.setValor_total(this.valorTotal);
-            DaoPedido pedidoDao = new DaoPedido();
-            
-            salvarPedido(pedido, pedidoDao);
-            
-            pedido = pedidoDao.pesquisaPorData(pedido);
-            pedido.setCliente(cliente);
-            
-            vincularLanchesEBebidasAoPedido(pedido, this.lanches, this.bebidas, pedidoDao);
-            
-            Logger logger = LoggerFactory.getLogger(Comprar.class);
-            logger.info(this.lanches.toString());
-            
-            retornarResposta(response, "Pedido Salvo com Sucesso!");
-        } else {
-            retornarResposta(response, "erro");
-        }
-    }
-        
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">

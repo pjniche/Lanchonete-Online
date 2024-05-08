@@ -4,71 +4,66 @@
  */
 package lanchonete.controllers;
 
-import static org.junit.Assert.*;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import static org.mockito.Mockito.*;
-import org.mockito.runners.MockitoJUnitRunner;
-import org.json.JSONObject;
-import java.util.List;
-import java.util.ArrayList;
-import lanchonete.dao.DaoLanche;
 import lanchonete.dao.DaoBebida;
-import lanchonete.model.Lanche;
+import lanchonete.dao.DaoCliente;
+import lanchonete.dao.DaoLanche;
+import lanchonete.dao.DaoPedido;
 import lanchonete.model.Bebida;
+import lanchonete.model.Cliente;
+import lanchonete.model.Lanche;
+import lanchonete.model.Pedido;
+import org.junit.Test;
+import org.json.JSONObject;
+import static org.mockito.Mockito.*;
 
 /**
  *
  * @author paulo
  */
-@RunWith(MockitoJUnitRunner.class)
+
 public class ComprarTest {
 
-    @Mock
-    private JSONObject dadosMock;
-
-    @Mock
-    private DaoLanche lancheDaoMock;
-
-    @Mock
-    private DaoBebida bebidaDaoMock;
-
-    @InjectMocks
-    private Comprar comprar;
-
     @Test
-    public void testProcessarLanchesEBebidas() {
-        // Configurar dados simulados
-        when(dadosMock.keys()).thenReturn(new Iterator<String>() {
-            private boolean hasNext = true;
-            public boolean hasNext() { return hasNext; }
-            public String next() {
-                hasNext = false;
-                return "lancheNome";
-            }
-        });
-        when(dadosMock.getJSONArray("lancheNome")).thenReturn(new JSONArray().put("lancheNome").put("lanche").put(2));
+    public void testValidarPedido() {
+        // Criação dos mocks
+        DaoCliente daoClienteMock = mock(DaoCliente.class);
+        DaoLanche daoLancheMock = mock(DaoLanche.class);
+        DaoBebida daoBebidaMock = mock(DaoBebida.class);
+        DaoPedido daoPedidoMock = mock(DaoPedido.class);
+        Cliente clienteMock = mock(Cliente.class);
+        Lanche lancheMock = mock(Lanche.class);
+        Bebida bebidaMock = mock(Bebida.class);
+        Pedido pedidoMock = mock(Pedido.class);
 
-        // Configurar comportamento simulado para DaoLanche
-        Lanche lancheSimulado = new Lanche();
-        lancheSimulado.setValor_venda(10.0);
-        when(lancheDaoMock.pesquisaPorNome("lancheNome")).thenReturn(lancheSimulado);
+        // Definindo o comportamento dos mocks
+        when(daoClienteMock.pesquisaPorID(anyString())).thenReturn(clienteMock);
+        when(daoLancheMock.pesquisaPorNome(anyString())).thenReturn(lancheMock);
+        when(daoBebidaMock.pesquisaPorNome(anyString())).thenReturn(bebidaMock);
+        when(daoPedidoMock.pesquisaPorData(any())).thenReturn(pedidoMock);
 
-        // Chamar método a ser testado
-        List<Lanche> lanches = new ArrayList<>();
-        List<Bebida> bebidas = new ArrayList<>();
-        comprar.processarLanchesEBebidas(dadosMock, lanches, bebidas);
+        // Instância da classe a ser testada
+        Comprar comprar = new Comprar();
 
-        // Verificar se o método setQuantidade foi chamado para o lanche simulado
-        verify(lancheSimulado).setQuantidade(2);
+        // Substituir os Daos na classe Comprar pelos mocks
+        // ...
 
-        // Verificar se o lanche foi adicionado à lista de lanches
-        assertEquals(1, lanches.size());
-        assertEquals(lancheSimulado, lanches.get(0));
+        // Dados do pedido em formato JSON
+        JSONObject dados = new JSONObject("{\n" +
+"    \"id\": 1,\n" +
+"    \"Hamburguer\": [\"Hamburguer\", \"lanche\", 2],\n" +
+"    \"Coca-Cola\": [\"Coca-Cola\", \"bebida\", 1]\n" +
+"}"); // Substitua por um JSON válido
 
-        // Verificar se o valor total foi atualizado corretamente
-        assertEquals(20.0, comprar.valorTotal, 0.01);
+        // Execução do método a ser testado
+        comprar.validarPedido(dados);
+
+        // Verificações
+        verify(daoClienteMock, times(1)).pesquisaPorID(anyString());
+        verify(daoLancheMock, atLeastOnce()).pesquisaPorNome(anyString());
+        verify(daoBebidaMock, atLeastOnce()).pesquisaPorNome(anyString());
+        verify(daoPedidoMock, times(1)).salvar(any());
+        verify(daoPedidoMock, times(1)).pesquisaPorData(any());
+        verify(daoPedidoMock, atLeastOnce()).vincularLanche(any(), any());
+        verify(daoPedidoMock, atLeastOnce()).vincularBebida(any(), any());
     }
 }
