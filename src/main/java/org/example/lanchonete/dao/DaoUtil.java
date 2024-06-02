@@ -12,9 +12,9 @@ public class DaoUtil {
     
     public Connection conecta(){
         try{
-            String url = "jdbc:postgresql://localhost:5432/lanchonete";
+            String url = "jdbc:postgresql://localhost:5432/postgres";
             String usuario = "postgres";
-            String senha = "123456";
+            String senha = "pjniche";
             return DriverManager.getConnection(url, usuario, senha);
             
         }catch(Exception e){
