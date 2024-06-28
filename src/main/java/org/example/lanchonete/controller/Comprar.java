@@ -40,6 +40,9 @@ import org.slf4j.LoggerFactory;
  */
 public class Comprar extends HttpServlet {
 
+    public Comprar(DaoBebida daoBebida, DaoCliente daoCliente, DaoLanche daoLanche, DaoPedido daoPedido, ValidadorCookie validadorCookie) {
+    }
+
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -49,7 +52,7 @@ public class Comprar extends HttpServlet {
      * @throws ServletException if a servlet-specific error occurs
      * @throws IOException if an I/O error occurs
      */
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+    public void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, JSONException {
 
         response.setContentType("application/json");
@@ -66,12 +69,7 @@ public class Comprar extends HttpServlet {
                 //////////////
             }
             if (resultado) {
-                String json = br.readLine();
-                byte[] bytes = json.getBytes(ISO_8859_1); 
-                String jsonStr = new String(bytes, UTF_8);            
-                JSONObject dados = new JSONObject(jsonStr);
-                
-                validarPedido(dados);
+                validarPedido(br);
                 
                 try (PrintWriter out = response.getWriter()) {
                     out.println("Pedido Salvo com Sucesso!");
@@ -84,8 +82,13 @@ public class Comprar extends HttpServlet {
         }
     }
     
-    public void validarPedido(JSONObject dados) throws JSONException {
-        
+    public void validarPedido(BufferedReader br) throws IOException, JSONException {
+
+        String json = br.readLine();
+        byte[] bytes = json.getBytes(ISO_8859_1);
+        String jsonStr = new String(bytes, UTF_8);
+        JSONObject dados = new JSONObject(jsonStr);
+
         DaoCliente clienteDao = new DaoCliente(); 
         Cliente cliente = clienteDao.pesquisaPorID(String.valueOf(dados.getInt("id")));
             
