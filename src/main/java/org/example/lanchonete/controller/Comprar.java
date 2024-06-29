@@ -95,7 +95,7 @@ public class Comprar extends HttpServlet {
     }
 
     private void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException, JSONException {
+            throws IOException, JSONException {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
@@ -157,11 +157,11 @@ public class Comprar extends HttpServlet {
 
                 if ("lanche".equals(tipo)) {
                     Lanche lanche = processarLanche(nome, quantidade);
-                    valorTotal += lanche.getValor_venda();
+                    valorTotal += lanche.getValor_venda() * quantidade;
                     lanches.add(lanche);
                 } else if ("bebida".equals(tipo)) {
                     Bebida bebida = processarBebida(nome, quantidade);
-                    valorTotal += bebida.getValor_venda();
+                    valorTotal += bebida.getValor_venda() * quantidade;
                     bebidas.add(bebida);
                 }
             }
