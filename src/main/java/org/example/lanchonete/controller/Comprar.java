@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package org.example.lanchonete.controller;
 
 import org.example.lanchonete.dao.DaoBebida;
@@ -18,8 +13,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import static java.nio.charset.StandardCharsets.ISO_8859_1;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -29,143 +22,68 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
+
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-/**
- *
- * @author kener_000
- */
 public class Comprar extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    public void processRequest(HttpServletRequest request, HttpServletResponse response)
+    private final DaoCliente clienteDao;
+    private final DaoLanche lancheDao;
+    private final DaoBebida bebidaDao;
+    private final DaoPedido pedidoDao;
+    private final ValidadorCookie validadorCookie;
+
+    public Comprar(DaoCliente clienteDao, DaoLanche lancheDao, DaoBebida bebidaDao, DaoPedido pedidoDao, ValidadorCookie validadorCookie) {
+        this.clienteDao = clienteDao;
+        this.lancheDao = lancheDao;
+        this.bebidaDao = bebidaDao;
+        this.pedidoDao = pedidoDao;
+        this.validadorCookie = validadorCookie;
+    }
+
+    public void setProcessRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, JSONException {
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        try(BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream()))) {
-            ////////Validar Cookie
-            boolean resultado = false;
-            try{
-                Cookie[] cookies = request.getCookies();
-                ValidadorCookie validar = new ValidadorCookie();
-
-                resultado = validar.validar(cookies);
-            }catch(java.lang.NullPointerException e){
-                //////////////
-            }
-
-            if ((br != null) && resultado) {
-                String json = br.readLine();
-                validarPedido(json);
-
-                try (PrintWriter out = response.getWriter()) {
-                    out.println("Pedido Salvo com Sucesso!");
-                }
-            } else {
-                try (PrintWriter out = response.getWriter()) {
-                    out.println("erro");
-                }
-            }
-        }
+        this.processRequest(request, response);
     }
 
-    public void validarPedido(String json) throws JSONException {
-
-        byte[] bytes = json.getBytes(ISO_8859_1);
-        String jsonStr = new String(bytes, UTF_8);
-        JSONObject dados = new JSONObject(jsonStr);
-
-        DaoCliente clienteDao = new DaoCliente();
-        Cliente cliente = clienteDao.pesquisaPorID(String.valueOf(dados.getInt("id")));
-
-        Iterator<String> keys = dados.keys();
-
-        Double valorTotal = 0.00;
-
-        List<Lanche> lanches = new ArrayList<>();
-        List<Bebida> bebidas = new ArrayList<>();
-
-        while(keys.hasNext()) {
-
-            String nome = keys.next();
-            if(!nome.equals("id")){
-                if(dados.getJSONArray(nome).get(1).equals("lanche")){
-                    DaoLanche lancheDao = new DaoLanche();
-                    Lanche lanche = lancheDao.pesquisaPorNome(nome);
-                    int quantidade = dados.getJSONArray(nome).getInt(2);
-                    lanche.setQuantidade(quantidade);
-                    valorTotal += lanche.getValor_venda();
-                    lanches.add(lanche);
-                }
-                if(dados.getJSONArray(nome).get(1).equals("bebida")){
-                    DaoBebida bebidaDao = new DaoBebida();
-                    Bebida bebida = bebidaDao.pesquisaPorNome(nome);
-                    int quantidade = dados.getJSONArray(nome).getInt(2);
-                    bebida.setQuantidade(quantidade);
-                    valorTotal += bebida.getValor_venda();
-                    bebidas.add(bebida);
-                }
-            }
-        }
-
-        DaoPedido pedidoDao = new DaoPedido();
-        Pedido pedido = new Pedido();
-        pedido.setData_pedido(Instant.now().toString());
-        pedido.setCliente(cliente);
-        pedido.setValor_total(valorTotal);
-        pedidoDao.salvar(pedido);
-        pedido = pedidoDao.pesquisaPorData(pedido);
-        pedido.setCliente(cliente);
-
-        Logger logger = LoggerFactory.getLogger(Comprar.class);
-        logger.info(lanches.toString());
-        for(int i = 0; i<lanches.size(); i++){
-            pedidoDao.vincularLanche(pedido, lanches.get(i));
-        }
-        for(int i = 0; i<bebidas.size(); i++){
-            pedidoDao.vincularBebida(pedido, bebidas.get(i));
-        }
+    public boolean setValidarCookie(HttpServletRequest request) {
+        return this.validarCookie(request);
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        try {
-            processRequest(request, response);
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
+    public String setLerJson(HttpServletRequest request) throws IOException {
+        return this.lerJson(request);
     }
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
+    public double setProcessarItens(JSONObject dados, List<Lanche> lanches, List<Bebida> bebidas) throws JSONException {
+        return this.processarItens(dados, lanches, bebidas);
+    }
+
+    public Lanche setProcessarLanche(String nome, int quantidade) {
+        return this.processarLanche(nome, quantidade);
+    }
+
+    public Bebida setProcessarBebida(String nome, int quantidade) {
+        return this.processarBebida(nome, quantidade);
+    }
+
+    public Pedido setCriarESalvarPedido(Cliente cliente, double valorTotal) {
+        return this.criarESalvarPedido(cliente, valorTotal);
+    }
+
+    public void setVincularItensPedido(Pedido pedido, List<Lanche> lanches, List<Bebida> bebidas) {
+        this.vincularItensPedido(pedido, lanches, bebidas);
+    }
+
+    public void setResponderComSucesso(HttpServletResponse response) throws IOException {
+        this.responderComSucesso(response);
+    }
+
+    public void setResponderComErro(HttpServletResponse response) throws IOException {
+        this.responderComErro(response);
+    }
+
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -176,14 +94,120 @@ public class Comprar extends HttpServlet {
         }
     }
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
+    private void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException, JSONException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
 
+        if (!validarCookie(request)) {
+            responderComErro(response);
+            return;
+        }
+
+        String jsonStr = lerJson(request);
+        if (jsonStr.isEmpty()) {
+            responderComErro(response);
+            return;
+        }
+
+        JSONObject dados = new JSONObject(jsonStr);
+        Cliente cliente = clienteDao.pesquisaPorID(String.valueOf(dados.getInt("id")));
+
+        List<Lanche> lanches = new ArrayList<>();
+        List<Bebida> bebidas = new ArrayList<>();
+        double valorTotal = processarItens(dados, lanches, bebidas);
+
+        Pedido pedido = criarESalvarPedido(cliente, valorTotal);
+        vincularItensPedido(pedido, lanches, bebidas);
+
+        responderComSucesso(response);
+    }
+
+    private boolean validarCookie(HttpServletRequest request) {
+        try {
+            Cookie[] cookies = request.getCookies();
+            return validadorCookie.validar(cookies);
+        } catch (NullPointerException e) {
+            return false;
+        }
+    }
+
+    private String lerJson(HttpServletRequest request) throws IOException {
+        if (request == null || request.getInputStream() == null) {
+            return "";
+        }
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(request.getInputStream(), StandardCharsets.ISO_8859_1))) {
+            String json = br.readLine();
+            if (json == null) {
+                return "";
+            }
+            return new String(json.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+        }
+    }
+
+    private double processarItens(JSONObject dados, List<Lanche> lanches, List<Bebida> bebidas) throws JSONException {
+        double valorTotal = 0.0;
+        for (Iterator it = dados.keys(); it.hasNext(); ) {
+            String nome = (String) it.next();
+            if (!nome.equals("id")) {
+                JSONObject item = dados.getJSONObject(nome);
+                String tipo = item.getString("tipo");
+                int quantidade = item.getInt("quantidade");
+
+                if ("lanche".equals(tipo)) {
+                    Lanche lanche = processarLanche(nome, quantidade);
+                    valorTotal += lanche.getValor_venda();
+                    lanches.add(lanche);
+                } else if ("bebida".equals(tipo)) {
+                    Bebida bebida = processarBebida(nome, quantidade);
+                    valorTotal += bebida.getValor_venda();
+                    bebidas.add(bebida);
+                }
+            }
+        }
+        return valorTotal;
+    }
+
+    private Lanche processarLanche(String nome, int quantidade) {
+        Lanche lanche = lancheDao.pesquisaPorNome(nome);
+        lanche.setQuantidade(quantidade);
+        return lanche;
+    }
+
+    private Bebida processarBebida(String nome, int quantidade) {
+        Bebida bebida = bebidaDao.pesquisaPorNome(nome);
+        bebida.setQuantidade(quantidade);
+        return bebida;
+    }
+
+    private Pedido criarESalvarPedido(Cliente cliente, double valorTotal) {
+        Pedido pedido = new Pedido();
+        pedido.setData_pedido(Instant.now().toString());
+        pedido.setCliente(cliente);
+        pedido.setValor_total(valorTotal);
+        pedidoDao.salvar(pedido);
+        return pedidoDao.pesquisaPorData(pedido);
+    }
+
+    private void vincularItensPedido(Pedido pedido, List<Lanche> lanches, List<Bebida> bebidas) {
+        for (Lanche lanche : lanches) {
+            pedidoDao.vincularLanche(pedido, lanche);
+        }
+        for (Bebida bebida : bebidas) {
+            pedidoDao.vincularBebida(pedido, bebida);
+        }
+    }
+
+    private void responderComSucesso(HttpServletResponse response) throws IOException {
+        try (PrintWriter out = response.getWriter()) {
+            out.println("Pedido Salvo com Sucesso!");
+        }
+    }
+
+    private void responderComErro(HttpServletResponse response) throws IOException {
+        try (PrintWriter out = response.getWriter()) {
+            out.println("erro");
+        }
+    }
 }
