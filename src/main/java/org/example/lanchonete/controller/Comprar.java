@@ -40,9 +40,6 @@ import org.slf4j.LoggerFactory;
  */
 public class Comprar extends HttpServlet {
 
-    public Comprar(DaoBebida daoBebida, DaoCliente daoCliente, DaoLanche daoLanche, DaoPedido daoPedido, ValidadorCookie validadorCookie) {
-    }
-
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -63,14 +60,16 @@ public class Comprar extends HttpServlet {
             try{
                 Cookie[] cookies = request.getCookies();
                 ValidadorCookie validar = new ValidadorCookie();
-                
+
                 resultado = validar.validar(cookies);
             }catch(java.lang.NullPointerException e){
                 //////////////
             }
-            if (resultado) {
-                validarPedido(br);
-                
+
+            if ((br != null) && resultado) {
+                String json = br.readLine();
+                validarPedido(json);
+
                 try (PrintWriter out = response.getWriter()) {
                     out.println("Pedido Salvo com Sucesso!");
                 }
@@ -81,26 +80,25 @@ public class Comprar extends HttpServlet {
             }
         }
     }
-    
-    public void validarPedido(BufferedReader br) throws IOException, JSONException {
 
-        String json = br.readLine();
+    public void validarPedido(String json) throws JSONException {
+
         byte[] bytes = json.getBytes(ISO_8859_1);
         String jsonStr = new String(bytes, UTF_8);
         JSONObject dados = new JSONObject(jsonStr);
 
-        DaoCliente clienteDao = new DaoCliente(); 
+        DaoCliente clienteDao = new DaoCliente();
         Cliente cliente = clienteDao.pesquisaPorID(String.valueOf(dados.getInt("id")));
-            
+
         Iterator<String> keys = dados.keys();
-            
+
         Double valorTotal = 0.00;
-            
+
         List<Lanche> lanches = new ArrayList<>();
         List<Bebida> bebidas = new ArrayList<>();
-        
+
         while(keys.hasNext()) {
-                
+
             String nome = keys.next();
             if(!nome.equals("id")){
                 if(dados.getJSONArray(nome).get(1).equals("lanche")){
@@ -121,7 +119,7 @@ public class Comprar extends HttpServlet {
                 }
             }
         }
-        
+
         DaoPedido pedidoDao = new DaoPedido();
         Pedido pedido = new Pedido();
         pedido.setData_pedido(Instant.now().toString());
@@ -130,7 +128,7 @@ public class Comprar extends HttpServlet {
         pedidoDao.salvar(pedido);
         pedido = pedidoDao.pesquisaPorData(pedido);
         pedido.setCliente(cliente);
-            
+
         Logger logger = LoggerFactory.getLogger(Comprar.class);
         logger.info(lanches.toString());
         for(int i = 0; i<lanches.size(); i++){
