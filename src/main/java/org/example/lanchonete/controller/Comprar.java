@@ -1,5 +1,6 @@
 package org.example.lanchonete.controller;
 
+import jakarta.servlet.annotation.WebServlet;
 import org.example.lanchonete.dao.DaoBebida;
 import org.example.lanchonete.dao.DaoCliente;
 import org.example.lanchonete.dao.DaoLanche;
@@ -27,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+@WebServlet(name = "comprar", urlPatterns = {"/comprar"})
 public class Comprar extends HttpServlet {
 
     private final DaoCliente clienteDao;
@@ -41,6 +43,14 @@ public class Comprar extends HttpServlet {
         this.bebidaDao = bebidaDao;
         this.pedidoDao = pedidoDao;
         this.validadorCookie = validadorCookie;
+    }
+
+    public Comprar() {
+        this.clienteDao = null;
+        this.lancheDao = null;
+        this.bebidaDao = null;
+        this.pedidoDao = null;
+        this.validadorCookie = null;
     }
 
     public void setProcessRequest(HttpServletRequest request, HttpServletResponse response)

@@ -155,15 +155,14 @@ public class ComprarTest {
         verify(validadorCookie).validar(cookies);
     }
 
-    /*
     @Test
     void testValidarCookie_SemCookies() {
         when(request.getCookies()).thenReturn(null);
+        when(validadorCookie.validar(null)).thenReturn(false);
 
         assertFalse(comprar.setValidarCookie(request));
-        verify(validadorCookie, never()).validar(any());
+        verify(validadorCookie).validar(null);
     }
-    */
 
     @Test
     void testLerJsonComConteudoValido() throws IOException, JSONException {
