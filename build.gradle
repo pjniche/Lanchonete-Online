@@ -20,13 +20,14 @@ ext {
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
-
+/*
 pitest {
     //adds dependency to org.pitest:pitest-junit5-plugin and sets "testPlugin" to "junit5"
     junit5PluginVersion = '1.2.1'
     pitestVersion = '1.15.2'
     //...
 }
+*/
 
 dependencies {
     compileOnly('jakarta.platform:jakarta.jakartaee-api:10.0.0')
