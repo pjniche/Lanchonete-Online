@@ -93,7 +93,7 @@
     </servlet>
     <servlet>
         <servlet-name>comprar</servlet-name>
-        <servlet-class>org.example.lanchonete.controller.ComprarBackup</servlet-class>
+        <servlet-class>org.example.lanchonete.controller.Comprar</servlet-class>
     </servlet>
     <servlet>
         <servlet-name>getRelatorioBebidas</servlet-name>
