@@ -72,15 +72,12 @@ public class ComprarTest {
 
         Cliente cliente = new Cliente();
         when(clienteDao.pesquisaPorID("1")).thenReturn(cliente);
-
         Lanche lanche = new Lanche();
         lanche.setValor_venda(10.0);
         when(lancheDao.pesquisaPorNome("hamburguer")).thenReturn(lanche);
-
         Bebida bebida = new Bebida();
         bebida.setValor_venda(5.0);
         when(bebidaDao.pesquisaPorNome("refrigerante")).thenReturn(bebida);
-
         Pedido pedido = new Pedido();
         when(pedidoDao.pesquisaPorData(any())).thenReturn(pedido);
 
@@ -90,7 +87,6 @@ public class ComprarTest {
 
         // Act
         comprar.setProcessRequest(request, response);
-
         // Assert
         verify(pedidoDao).salvar(any(Pedido.class));
         verify(pedidoDao).vincularLanche(eq(pedido), any(Lanche.class));
