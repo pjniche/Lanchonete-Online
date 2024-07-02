@@ -45,14 +45,6 @@ public class Comprar extends HttpServlet {
         this.validadorCookie = validadorCookie;
     }
 
-    public Comprar() {
-        this.clienteDao = null;
-        this.lancheDao = null;
-        this.bebidaDao = null;
-        this.pedidoDao = null;
-        this.validadorCookie = null;
-    }
-
     public void setProcessRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, JSONException {
         this.processRequest(request, response);

@@ -10,7 +10,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 
-public class ComprarSeleniumTestPageObject {
+public class SeleniumComprarTestPageObject {
     private WebDriver driver;
 
     public void setUp() {

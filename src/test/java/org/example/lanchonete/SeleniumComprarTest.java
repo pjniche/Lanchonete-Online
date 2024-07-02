@@ -3,12 +3,12 @@ package org.example.lanchonete;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class ComprarSeleniumTest {
-    private ComprarSeleniumTestPageObject realizarPedido;
+public class SeleniumComprarTest {
+    private SeleniumComprarTestPageObject realizarPedido;
 
     @BeforeEach
     public void beforeEach() {
-        this.realizarPedido = new ComprarSeleniumTestPageObject();
+        this.realizarPedido = new SeleniumComprarTestPageObject();
         this.realizarPedido.setUp();
     }
 
